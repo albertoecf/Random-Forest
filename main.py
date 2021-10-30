@@ -21,7 +21,9 @@ from sklearn.ensemble import RandomForestRegressor
 # %%
 
 # Leemos el archivo
-file = pd.read_csv('ropa.csv')
+file = pd.read_csv('searchAll.csv')
+file = file[file['VERTICAL_CATEG_NAME']=='ROPA Y ACCESORIOS']
+#%%
 # %%
 # Para este análisis no usamos la vertical (podemos incluirla como categorica)
 file.drop(columns=['VERTICAL_CATEG_NAME'], inplace=True)
@@ -30,6 +32,7 @@ file.drop(columns=['VERTICAL_CATEG_NAME'], inplace=True)
 file['TIM_DAY'] = pd.to_datetime(file['TIM_DAY'])
 file = file[file['TIM_DAY'] > '2021-06-15']
 
+#%%
 # Calculamos un promedio del costo con un rolling window para tener de referencia
 # ¿Cuánto mejor es nuestro modelo que tirar el promedio?
 file['average'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
@@ -47,11 +50,17 @@ file['TroasAnteAyer'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascendin
 file['TroasSemPasada'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
     'TROAS_SEARCH'].shift(-7).copy())
 
+file['CpcAyer'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
+    'CPC_SEARCH'].shift(-1).copy())
+
+
+
+
 
 file = file.dropna()
 
 sns.pairplot(file)
-
+#%%
 # Usamos One-Hot encoding para las variables categoricas (en este caso dia semana)
 file.drop(columns=['TIM_DAY'], inplace=True)
 features = pd.get_dummies(file)
@@ -109,7 +118,7 @@ accuracy = 100 - np.mean(mape)
 print('Accuracy:', round(accuracy, 2), '%.')
 # %%
 
-# %%
+
 
 # usamos .feature_importances_ sobre nuestro modelo rf
 # Para entender cuál es la importancia de cada variable (en %)
