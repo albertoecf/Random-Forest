@@ -3,7 +3,7 @@
 # Manipulación & convertir a arrays
 import matplotlib.pyplot as plt
 import pydot
-from sklearn.tree import export_graphviz
+
 import pandas as pd
 import numpy as np
 
@@ -19,11 +19,22 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 
 # %%
+# Definimos Funciones
+def shifted_value(df, newcol, col, days):
+    """function to shift values xDays"""
+    df2 = df.copy()
+    df2[newcol] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
+        col].shift(days).copy())
+
+    return df2
+
+
+# %%
 
 # Leemos el archivo
 file = pd.read_csv('searchAll.csv')
-file = file[file['VERTICAL_CATEG_NAME']=='ROPA Y ACCESORIOS']
-#%%
+file = file[file['VERTICAL_CATEG_NAME'] == 'ROPA Y ACCESORIOS']
+# %%
 # %%
 # Para este análisis no usamos la vertical (podemos incluirla como categorica)
 file.drop(columns=['VERTICAL_CATEG_NAME'], inplace=True)
@@ -32,37 +43,39 @@ file.drop(columns=['VERTICAL_CATEG_NAME'], inplace=True)
 file['TIM_DAY'] = pd.to_datetime(file['TIM_DAY'])
 file = file[file['TIM_DAY'] > '2021-06-15']
 
-#%%
+# %%
 # Calculamos un promedio del costo con un rolling window para tener de referencia
 # ¿Cuánto mejor es nuestro modelo que tirar el promedio?
 file['average'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
                            'COST_SEARCH'].rolling(14).mean().sort_index(ascending=True).copy())
-file['rollingTroas7'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
-    'TROAS_SEARCH'].rolling(7).mean().sort_index(ascending=True).copy())
-file['rollingTroas14'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
-    'TROAS_SEARCH'].rolling(14).mean().sort_index(ascending=True).copy())
-
-file['TroasAyer'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
-    'TROAS_SEARCH'].shift(-1).copy())
-
-file['TroasAnteAyer'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
-    'TROAS_SEARCH'].shift(-2).copy())
-file['TroasSemPasada'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
-    'TROAS_SEARCH'].shift(-7).copy())
-
-file['CpcAyer'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
-    'CPC_SEARCH'].shift(-1).copy())
 
 
+file['rollingTroas1'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
+    'TROAS_SEARCH'].rolling(1).mean().sort_index(ascending=True).copy())
 
+file['rollingTroas2'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
+    'TROAS_SEARCH'].rolling(2).mean().sort_index(ascending=True).copy())
+file['rollingTroas3'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
+    'TROAS_SEARCH'].rolling(3).mean().sort_index(ascending=True).copy())
 
-
+# Calculamos valores Ayer
+columns_to_shift = ['TROAS_SEARCH', 'CPC_SEARCH', 'CTR_SEARCH','CTR_SEARCH','CONVERSION_VALUE_SEARCH','CLICS_SEARCH','COST_SEARCH','OGMV_SEARCH']
+for column in columns_to_shift:
+    columnName = column + '_Ayer'
+    file = shifted_value(file, columnName, column,-1)
+# Calculamos valores semana pasada
+for column in columns_to_shift:
+    columnName = column + '_LastWeek'
+    file = shifted_value(file, columnName, column,-7)
+file.drop(columns=[ 'IMPRESIONES_SEARCH','CLICS_SEARCH'], inplace=True)
 file = file.dropna()
 
-sns.pairplot(file)
-#%%
+#sns.pairplot(file)
+# %%
 # Usamos One-Hot encoding para las variables categoricas (en este caso dia semana)
-file.drop(columns=['TIM_DAY'], inplace=True)
+file.drop(columns=['TIM_DAY','CPC_SEARCH'], inplace=True)
+
+
 features = pd.get_dummies(file)
 
 # %%
@@ -117,7 +130,6 @@ print('Mean Absolute Percent Error:', round(np.mean(mape), 2), '%.')
 accuracy = 100 - np.mean(mape)
 print('Accuracy:', round(accuracy, 2), '%.')
 # %%
-
 
 
 # usamos .feature_importances_ sobre nuestro modelo rf
