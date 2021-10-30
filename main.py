@@ -22,7 +22,7 @@ from sklearn.ensemble import RandomForestRegressor
 
 # Leemos el archivo
 file = pd.read_csv('ropa.csv')
-
+# %%
 # Para este análisis no usamos la vertical (podemos incluirla como categorica)
 file.drop(columns=['VERTICAL_CATEG_NAME'], inplace=True)
 
@@ -34,6 +34,20 @@ file = file[file['TIM_DAY'] > '2021-06-15']
 # ¿Cuánto mejor es nuestro modelo que tirar el promedio?
 file['average'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
                            'COST_SEARCH'].rolling(14).mean().sort_index(ascending=True).copy())
+file['rollingTroas7'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
+    'TROAS_SEARCH'].rolling(7).mean().sort_index(ascending=True).copy())
+file['rollingTroas14'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
+    'TROAS_SEARCH'].rolling(14).mean().sort_index(ascending=True).copy())
+
+file['TroasAyer'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
+    'TROAS_SEARCH'].shift(-1).copy())
+
+file['TroasAnteAyer'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
+    'TROAS_SEARCH'].shift(-2).copy())
+file['TroasSemPasada'] = np.array(file.set_index(['TIM_DAY']).sort_index(ascending=False)[
+    'TROAS_SEARCH'].shift(-7).copy())
+
+
 file = file.dropna()
 
 sns.pairplot(file)
@@ -86,7 +100,7 @@ predictions = rf.predict(test_features)
 errors = abs(predictions - test_labels)
 # Visualizamos el mae (la media del error absoluto/ mean absolute error)
 print('Mean Absolute Error:', round(np.mean(errors), 2), 'ARS.')
-#%%
+# %%
 # Calculamos el MAPE (la media del error porcentual / mean absolute percentage error)
 mape = 100 * (errors / test_labels)
 print('Mean Absolute Percent Error:', round(np.mean(mape), 2), '%.')
@@ -97,7 +111,7 @@ print('Accuracy:', round(accuracy, 2), '%.')
 
 # %%
 
-# usamos .feature_importances_ sobre nuestro modelo rf 
+# usamos .feature_importances_ sobre nuestro modelo rf
 # Para entender cuál es la importancia de cada variable (en %)
 importances = list(rf.feature_importances_)
 
@@ -113,24 +127,6 @@ feature_importances = sorted(
 # %%
 
 
-# New random forest with only the two most important variables
-rf_most_important = RandomForestRegressor(n_estimators=1000, random_state=42)
-# Extract the two most important features
-important_indices = [feature_list.index(
-    'TROAS_SEARCH'), feature_list.index('CPC_SEARCH')]
-train_important = train_features[:, important_indices]
-test_important = test_features[:, important_indices]
-# Train the random forest
-rf_most_important.fit(train_important, train_labels)
-# Make predictions and determine the error
-predictions = rf_most_important.predict(test_important)
-errors = abs(predictions - test_labels)
-# Display the performance metrics
-print('Mean Absolute Error:', round(np.mean(errors), 2), 'ARS.')
-mape = np.mean(100 * (errors / test_labels))
-accuracy = 100 - mape
-print('Accuracy:', round(accuracy, 2), '%.')
-# %%
 # Import matplotlib for plotting and use magic command for Jupyter Notebooks
 
 # Set the style
